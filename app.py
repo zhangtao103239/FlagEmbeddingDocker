@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request
 from FlagEmbedding import FlagModel
-model = FlagModel('./bge-small-zh', query_instruction_for_retrieval="为这个句子生成表示以用于检索相关文章：",use_half=False)
+model = FlagModel('BAAI/bge-small-zh', query_instruction_for_retrieval="为这个句子生成表示以用于检索相关文章：",use_half=False)
 app = Flask(__name__)
 
 @app.route('/')
