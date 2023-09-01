@@ -12,7 +12,7 @@ import numpy as np
 model = FlagModel('BAAI/bge-small-zh', query_instruction_for_retrieval="为这个句子生成表示以用于检索相关文章：",use_half=False)
 app = Flask(__name__)
 
-data_path = os.getenv("DATA_PATH", "/data")
+data_path = os.getenv("DATA_PATH", "./data")
 sql_data_path = os.path.join(data_path, "data.db")
 save_file_location = os.path.join(data_path, "faiss.index")
 d = 512                           # dimensionality of the vectors
