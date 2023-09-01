@@ -1,7 +1,53 @@
+import sqlite3
 from flask import Flask, jsonify, request
 from FlagEmbedding import FlagModel
+import os
+import click
+from flask import current_app, g
+from flask.cli import with_appcontext
+
 model = FlagModel('BAAI/bge-small-zh', query_instruction_for_retrieval="为这个句子生成表示以用于检索相关文章：",use_half=False)
 app = Flask(__name__)
+data_path = os.getenv("DATA_PATH", "./data")
+sql_data_path = os.path.join(data_path, "data.db")
+
+def init_db():
+    db = get_db()
+    with current_app.open_resource('schema.sql') as f:
+        db.executescript(f.read().decode('utf8'))
+
+@click.command('init-db')
+@with_appcontext
+def init_db_command():
+    """Clear the existing data and create new tables."""
+    init_db()
+    click.echo('Initialized the database.')
+
+
+def get_db():
+    if 'db' not in g:
+        g.db = sqlite3.connect(
+            sql_data_path,
+            detect_types=sqlite3.PARSE_DECLTYPES
+        )
+        g.db.row_factory = sqlite3.Row
+    return g.db
+
+@app.teardown_appcontext
+def close_connection(exception):
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
+
+
+# 如果sql_data_path文件不存在，则创建并初始化db
+
+if not os.path.exists(sql_data_path):
+    with open(sql_data_path, 'w') as f:
+        f.write('')
+    with app.app_context():
+        init_db()
+
 
 @app.route('/')
 def hello_world():

@@ -1,3 +1,4 @@
 FlagEmbedding
 Flask
 gunicorn
+faiss-cpu
