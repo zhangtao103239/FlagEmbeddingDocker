@@ -12,7 +12,7 @@ import numpy as np
 model = FlagModel('BAAI/bge-small-zh', query_instruction_for_retrieval="为这个句子生成表示以用于检索相关文章：",use_half=False)
 app = Flask(__name__)
 
-data_path = os.getenv("DATA_PATH", "./data")
+data_path = os.getenv("DATA_PATH", "/data")
 sql_data_path = os.path.join(data_path, "data.db")
 save_file_location = os.path.join(data_path, "faiss.index")
 d = 512                           # dimensionality of the vectors
@@ -90,16 +90,25 @@ def emedding():
         vendor_result = model.encode_queries([data])
         D, I = get_faiss_index().search(vendor_result, 10)
         print("I: ", I)
-        ids = ",".join([f'"{id}"' for id in I[0] if id != -1])
-        print("ids: ", ids)
+        ids = [str(id) for id in I[0] if id != -1]
+        print(ids)
         if len(ids) > 0:
+            str_ids = ",".join(ids)
             db = get_db()
             cursor = db.execute(
-                'SELECT id, content FROM information WHERE id in (?)', (ids,)
+                f'SELECT id, content FROM information WHERE id in ({str_ids})'
             )
             result = cursor.fetchall()
             result = [dict(row) for row in result]
-            print("result: ", result)
+            print("result:", result)
+            sorted_result = []
+            for id in ids:
+                for r in result:
+                    if str(r['id']) == id:
+                        sorted_result.append(r)
+                        break
+            print('sorted_result:', sorted_result)
+            result = sorted_result
         else:
             result = []
     else:
@@ -135,39 +144,3 @@ def list_information():
     data = cursor.fetchall()
     data = [dict(row) for row in data]
     return jsonify({"msg":"ok", "data": data,"code": 200})
-
-    if "data" in request.form:
-        data = request.form['data']
-    else:
-        data = request.args.get('data', '')
-    if data == '':
-        return jsonify({"msg":"error", "data": "Empty Emedding Data!", "code": 400})
-    if "type" in request.form:
-        type = request.form['type']
-    else:
-        type = request.args.get("type", "infomation")
-    if type == "query":
-        result = model.encode_queries([data]).tolist()
-    else:
-        db = get_db()
-        cursor = db.cursor()
-        # 基于content查询数据库的记录，如果有，直接返回vendor字段
-        cursor = cursor.execute(
-            'SELECT * FROM information WHERE content = ?', (data,)
-        )
-        result = cursor.fetchone()
-        if result:
-            print("found: ", result)
-            result = json.loads(result[2])
-        else:
-            vendor_result = model.encode([data])
-            print("vendor_shape: ", vendor_result.shape)
-            result = vendor_result.tolist()
-            cursor.execute("INSERT INTO information (content, vendor) VALUES (?, ?)", (data, str(result),))
-            id = cursor.lastrowid
-            xb = vendor_result
-            # get_faiss_index().train(xb)
-            get_faiss_index().add_with_ids(xb, [id])
-            print("insert id: ", id)
-            db.commit()
-    return jsonify({"msg":"ok", "data": result,"code": 200})
