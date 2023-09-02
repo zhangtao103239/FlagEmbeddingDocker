@@ -102,11 +102,15 @@ def emedding():
             result = [dict(row) for row in result]
             print("result:", result)
             sorted_result = []
+            id_index = 0
             for id in ids:
+                distence = D[0][id_index].tolist()
                 for r in result:
                     if str(r['id']) == id:
+                        r['distence'] = distence
                         sorted_result.append(r)
                         break
+                id_index += 1
             print('sorted_result:', sorted_result)
             result = sorted_result
         else:
