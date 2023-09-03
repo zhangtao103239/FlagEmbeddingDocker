@@ -30,12 +30,13 @@ def upload_to_sf(token, host_url, repo_id, path, filename):
         'Authorization': 'Token ' + token
     }
     url = host_url + '/api2/repos/' + repo_id + '/upload-link/'
-    r = requests.get(url, headers=headers, params={'p': path})
+    r = requests.get(url, headers=headers, params={'p': "/"})
     assert r.ok
     upload_url = r.text.replace('"', '')
     f = {'file': open(filename, 'rb')}
     data = {
-        "parent_dir": path,
+        "parent_dir": "/",
+        "relative_path": path,
         "replace": 1
     }
 

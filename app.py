@@ -20,8 +20,8 @@ sf_username = os.getenv("SF_USERNAME", "admin")
 sf_password = os.getenv("SF_PASSWORD", "")
 sf_host_url = os.getenv("SF_HOST_URL", "")
 sf_repo_id = os.getenv("SF_REPO_ID", "87faa67c-dc1c-4383-a36b-d7267c1a81ec")
-sf_sql_data_path = "WEB-APP/embedding/data.db"
-sf_faiss_data_path = "WEB-APP/embedding/faiss.index"
+sf_sql_data_path = "embedding/data.db"
+sf_faiss_data_path = "embedding/faiss.index"
 sf_token = login_sf(sf_host_url, sf_username, sf_password)
 d = 512                           # dimensionality of the vectors
 
@@ -81,8 +81,8 @@ def close_connection(exception):
     if faiss_index is not None:
         faiss.write_index(faiss_index, faiss_data_path)
     sf_token = login_sf(sf_host_url, sf_username, sf_password)
-    upload_to_sf(sf_token, sf_host_url, sf_repo_id, sf_sql_data_path, sql_data_path)
-    upload_to_sf(sf_token, sf_host_url, sf_repo_id, sf_faiss_data_path, faiss_data_path)
+    upload_to_sf(sf_token, sf_host_url, sf_repo_id, "embedding", sql_data_path)
+    upload_to_sf(sf_token, sf_host_url, sf_repo_id, "embedding", faiss_data_path)
 
 app.teardown_appcontext(close_connection)
 
