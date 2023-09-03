@@ -81,8 +81,10 @@ def close_connection(exception):
     if faiss_index is not None:
         faiss.write_index(faiss_index, faiss_data_path)
     sf_token = login_sf(sf_host_url, sf_username, sf_password)
-    upload_to_sf(sf_token, sf_host_url, sf_repo_id, "embedding", sql_data_path)
-    upload_to_sf(sf_token, sf_host_url, sf_repo_id, "embedding", faiss_data_path)
+    if os.path.exists(sql_data_path):
+        upload_to_sf(sf_token, sf_host_url, sf_repo_id, "embedding", sql_data_path)
+    if os.path.exists(faiss_data_path):
+        upload_to_sf(sf_token, sf_host_url, sf_repo_id, "embedding", faiss_data_path)
 
 app.teardown_appcontext(close_connection)
 
