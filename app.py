@@ -72,7 +72,6 @@ def get_faiss_index():
     return g.faiss_index
 
 
-@app.teardown_appcontext
 def close_connection(exception):
     db = g.pop('db', None)
     if db is not None:
