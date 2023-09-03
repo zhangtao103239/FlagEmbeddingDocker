@@ -7,14 +7,22 @@ import click
 from flask import current_app, g
 from flask.cli import with_appcontext
 import faiss
-import numpy as np
+from seafile_api import *
 
 model = FlagModel('BAAI/bge-small-zh', query_instruction_for_retrieval="为这个句子生成表示以用于检索相关文章：",use_half=False)
 app = Flask(__name__)
 
 data_path = os.getenv("DATA_PATH", "./data")
 sql_data_path = os.path.join(data_path, "data.db")
-save_file_location = os.path.join(data_path, "faiss.index")
+faiss_data_path = os.path.join(data_path, "faiss.index")
+is_download_from_sf = os.getenv("IS_DOWNLOAD_FROM_SF", "N")
+sf_username = os.getenv("SF_USERNAME", "admin")
+sf_password = os.getenv("SF_PASSWORD", "")
+sf_host_url = os.getenv("SF_HOST_URL", "")
+sf_repo_id = os.getenv("SF_REPO_ID", "87faa67c-dc1c-4383-a36b-d7267c1a81ec")
+sf_sql_data_path = "WEB-APP/embedding/data.db"
+sf_faiss_data_path = "WEB-APP/embedding/faiss.index"
+sf_token = login_sf(sf_host_url, sf_username, sf_password)
 d = 512                           # dimensionality of the vectors
 
 def init_db():
@@ -32,6 +40,15 @@ def init_db_command():
 
 def get_db():
     if 'db' not in g:
+        # 如果sql_data_path文件不存在，则创建并初始化db
+        if not os.path.exists(sql_data_path):
+            if is_download_from_sf == "Y":
+                download_from_sf(sf_token, sf_host_url, sf_repo_id, sf_sql_data_path, sql_data_path)
+            else:
+                with open(sql_data_path, 'w') as f:
+                    f.write('')
+                with app.app_context():
+                    init_db()
         g.db = sqlite3.connect(
             sql_data_path,
             detect_types=sqlite3.PARSE_DECLTYPES
@@ -41,12 +58,16 @@ def get_db():
 
 def get_faiss_index():
     if 'faiss_index' not in g:
-        if os.path.exists(save_file_location):
-            g.faiss_index = faiss.read_index(save_file_location)
+        if os.path.exists(faiss_data_path):
+            g.faiss_index = faiss.read_index(faiss_data_path)
         else:
-            with open(save_file_location, 'w') as f:
-                f.write('')
-            g.faiss_index = faiss.index_factory(d, "IDMap,Flat")
+            if is_download_from_sf == "Y":
+                download_from_sf(sf_token, sf_host_url, sf_repo_id, sf_faiss_data_path, faiss_data_path)
+                g.faiss_index = faiss.read_index(faiss_data_path)
+            else:
+                with open(faiss_data_path, 'w') as f:
+                    f.write('')
+                g.faiss_index = faiss.index_factory(d, "IDMap,Flat")
             print("faiss_index is trained?: ", g.faiss_index.is_trained)
     return g.faiss_index
 
@@ -58,16 +79,12 @@ def close_connection(exception):
         db.close()
     faiss_index = g.pop('faiss_index', None)
     if faiss_index is not None:
-        faiss.write_index(faiss_index, save_file_location)
+        faiss.write_index(faiss_index, faiss_data_path)
+    sf_token = login_sf(sf_host_url, sf_username, sf_password)
+    upload_to_sf(sf_token, sf_host_url, sf_repo_id, sf_sql_data_path, sql_data_path)
+    upload_to_sf(sf_token, sf_host_url, sf_repo_id, sf_faiss_data_path, faiss_data_path)
 
 app.teardown_appcontext(close_connection)
-
-# 如果sql_data_path文件不存在，则创建并初始化db
-if not os.path.exists(sql_data_path):
-    with open(sql_data_path, 'w') as f:
-        f.write('')
-    with app.app_context():
-        init_db()
 
 
 @app.route('/')
