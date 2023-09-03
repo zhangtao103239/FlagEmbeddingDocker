@@ -130,7 +130,7 @@ def emedding():
                         break
                 id_index += 1
             print('sorted_result:', sorted_result)
-            result = sorted_result
+            result = {'vendor': vendor_result.tolist(), 'result': sorted_result}
         else:
             result = []
     else:
